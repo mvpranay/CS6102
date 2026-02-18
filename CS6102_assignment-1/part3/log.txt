@@ -1,0 +1,10 @@
+/usr/lib/gcc/arm-none-eabi/13.2.1/../../../arm-none-eabi/bin/ld: /usr/lib/gcc/arm-none-eabi/13.2.1/../../../arm-none-eabi/bin/ld: benchmark.o: in function `benchmark_mayo':
+/home/imnothackr/TA-CS6102/CS6102_assignment-1/part3/benchmark.c:59:(.text.benchmark_mayo+0x14): undefined reference to `enable_cycle_counter'
+/usr/lib/gcc/arm-none-eabi/13.2.1/../../../arm-none-eabi/bin/ld: /home/imnothackr/TA-CS6102/CS6102_assignment-1/part3/benchmark.c:60:(.text.benchmark_mayo+0x18): undefined reference to `reset_cycle_counter'
+benchmark.o: in function `benchmark_mayo':
+/home/imnothackr/TA-CS6102/CS6102_assignment-1/part3/benchmark.c:59:(.text.benchmark_mayo+0x14): undefined reference to `enable_cycle_counter'
+/usr/lib/gcc/arm-none-eabi/13.2.1/../../../arm-none-eabi/bin/ld: /home/imnothackr/TA-CS6102/CS6102_assignment-1/part3/benchmark.c:60:(.text.benchmark_mayo+0x18): undefined reference to `reset_cycle_counter'
+collect2: error: ld returned 1 exit status
+collect2: error: ld returned 1 exit status
+make: *** [Makefile:46: mayo_benchmark.elf] Error 1
+make: *** [Makefile:46: mayo_benchmark.elf] Error 1

@@ -51,23 +51,73 @@ void init_random_matrix_l(uint16_t *matrix, int rows, int cols) {
 // TODO : GF(2^16) Multiplication
 // ============================================================================
 
+// uint16_t gf65536_mul(uint16_t a, uint16_t b) {
+//     // return 0;
+//     // TODO STUDENTS: Implement GF(2^16) multiplication
+//     // uint16_t X1 = (a & 0xFF00) >> 8;
+//     uint16_t X2 = (a & 0x00FF);
+    
+//     // uint16_t spaced_X1 = (X1 & 0x000F) | ((X1 & 0x00F0) << 4);
+//     uint16_t spaced_X2 = (X2 & 0x000F) | ((X2 & 0x00F0) << 4);
+
+//     // uint16_t prod1 = (-(b & 1) & spaced_X1) 
+//     //               ^ ((b & 2) * spaced_X1) 
+//     //               ^ ((b & 4) * spaced_X1) 
+//     //               ^ ((b & 8) * spaced_X1);
+
+//     uint16_t prod2 = (-(b & 1) & spaced_X2) 
+//                   ^ ((b & 2) * spaced_X2) 
+//                   ^ ((b & 4) * spaced_X2) 
+//                   ^ ((b & 8) * spaced_X2);
+
+//     // uint16_t reduced1 = prod1 
+//     //                  ^ ((prod1 >> 4) & 0x0F0F) 
+//     //                  ^ ((prod1 & 0xF0F0) >> 3);
+    
+//     uint16_t reduced2 = prod2
+//                      ^ ((prod2 >> 4) & 0x0F0F) 
+//                      ^ ((prod2 & 0xF0F0) >> 3);
+
+//     return (((reduced2 & 0x000F) | ((reduced2 >> 4) & 0x00F0)) << 8) | (reduced2 & 0x000F) | ((reduced2 >> 4) & 0x00F0);
+
+//     return 0;
+// }
+
+uint16_t mul_f(uint16_t a, uint16_t b)
+{
+    uint16_t r0_2 = ((a & 2) * b) ^ ((a & 1) * b) ^ ((a & 4) * b) ^ ((a & 8) * b);
+    return (r0_2 ^ (r0_2 >> 4) ^ (r0_2 & 0xf0) >> 3) & 0xf;
+}
+
 uint16_t gf65536_mul(uint16_t a, uint16_t b) {
     // TODO STUDENTS: Implement GF(2^16) multiplication
-    return 0;
+    return mul_f(a & 0xF, b) ^ (mul_f(a & 0xF0, b) << 4) ^ (mul_f(a & 0xF00, b) << 8) ^ (mul_f(a & 0xF000, b) << 12);
 }
 
 // ============================================================================
 // TODO : Matrix Operations
 // ============================================================================
 
+// mat[r,c] of dim (rows, cols) => mat[r * cols + c]
+
 void gf65536_mat_transpose(const uint16_t *src, uint16_t *dst,
                            int rows, int cols) {
     // TODO STUDENTS: Implement matrix transpose
+    for (int row = 0; row < rows; row++){
+        for (int col = 0; col < cols; col++){
+            dst[col * rows + row] = src[row * cols +  col];
+        }
+    }
 }
 
 void gf65536_mat_add(const uint16_t *A, const uint16_t *B, uint16_t *C,
                      int rows, int cols) {
     // TODO STUDENTS: Implement matrix addition over GF(2^16)
+    for (int r = 0; r < rows; r++){
+        for (int c = 0; c < cols; c++){
+            C[r * cols + c] = A[r * cols + c] ^ B[r * cols + c];
+        }
+    }
 }
 
 /**
@@ -81,6 +131,14 @@ void gf65536_mat_add(const uint16_t *A, const uint16_t *B, uint16_t *C,
 void gf65536_mat_mul(const uint16_t *A, const uint16_t *B, uint16_t *C,
                      int rows_A, int cols_A, int cols_B) {
     // TODO STUDENTS: Implement matrix multiplication over GF(2^16)
+    for (int r = 0; r < rows_A; r++){
+        for (int c = 0; c < cols_B; c++){
+            C[r * cols_B + c] = 0;
+            for (int i = 0; i < cols_A; i++){
+                C[r * cols_B + c] ^= A[r * cols_A + i] * B[i * cols_B + c];
+            }
+        }
+    }
 }
 
 // ============================================================================
@@ -98,5 +156,10 @@ void gf65536_mat_mul(const uint16_t *A, const uint16_t *B, uint16_t *C,
 int compute_L(const uint16_t *P1, const uint16_t *P2,
                const uint16_t *O, uint16_t *L) {
     // TODO: Implement the L computation
+    uint16_t temp[P1_ROWS * P1_COLS];
+    gf65536_mat_transpose(P1, temp, P1_ROWS, P1_COLS);
+    gf65536_mat_add(P1, temp, L, P1_ROWS, P1_COLS);
+    gf65536_mat_mul(L, O, temp, P1_ROWS, P1_COLS, O_COLS);
+    gf65536_mat_add(temp, P2, L, P2_ROWS, P2_COLS);
     return 0;
 }

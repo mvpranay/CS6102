@@ -7,25 +7,9 @@
  */
 unsigned char mul_f(unsigned char a, unsigned char b)
 {
-    // Write your code here
-    unsigned char p = 0;
     
-    // Unrolled loop for 4 bits (No branches)
-    // Bit 0
-    p = (b & 1) ? a : 0;
-    a = (a << 1) ^ ((a & 0x8) ? 0x13 : 0);
-    
-    // Bit 1
-    p ^= (b & 2) ? a : 0;
-    a = (a << 1) ^ ((a & 0x8) ? 0x13 : 0);
-    
-    // Bit 2
-    p ^= (b & 4) ? a : 0;
-    a = (a << 1) ^ ((a & 0x8) ? 0x13 : 0);
-    
-    // Bit 3
-    p ^= (b & 8) ? a : 0;
-    return p & 0xF;
+    unsigned char r0_2 = ((a & 2) * b) ^ ((a & 1) * b) ^ ((a & 4) * b) ^ ((a & 8) * b);
+    return (r0_2 ^ (r0_2 >> 4 & 0xf) ^ (r0_2 & 0xf0) >> 3) & 0xf;
 }
 
 // int main() {

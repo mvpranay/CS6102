@@ -90,7 +90,7 @@ uint16_t mul_f(uint16_t a, uint16_t b)
 
 uint16_t gf65536_mul(uint16_t a, uint16_t b) {
     // TODO STUDENTS: Implement GF(2^16) multiplication
-    return mul_f(a & 0xF, b) ^ (mul_f(a & 0xF0, b) << 4) ^ (mul_f(a & 0xF00, b) << 8) ^ (mul_f(a & 0xF000, b) << 12);
+    return mul_f(a & 0xF, b) ^ (mul_f((a & 0xF0) >> 4, b) << 4) ^ (mul_f((a & 0xF00) >> 8, b) << 8) ^ (mul_f((a & 0xF000) >> 12, b) << 12);
 }
 
 // ============================================================================
@@ -130,11 +130,11 @@ void gf65536_mat_add(const uint16_t *A, const uint16_t *B, uint16_t *C,
 void gf65536_mat_mul(const uint16_t *A, const uint16_t *B, uint16_t *C,
                      int rows_A, int cols_A, int cols_B) {
     // TODO STUDENTS: Implement matrix multiplication over GF(2^16)
+    memset(C, 0, rows_A * cols_B * sizeof(uint16_t));
     for (int r = 0; r < rows_A; r++){
         for (int c = 0; c < cols_B; c++){
-            C[r * cols_B + c] = 0;
             for (int i = 0; i < cols_A; i++){
-                C[r * cols_B + c] ^= A[r * cols_A + i] * B[i * cols_B + c];
+                C[r * cols_B + c] ^= gf65536_mul(A[r * cols_A + i], B[i * cols_B + c]);
             }
         }
     }

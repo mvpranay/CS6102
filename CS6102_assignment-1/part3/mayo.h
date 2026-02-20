@@ -45,7 +45,7 @@ void print_matrix_gf65536(const char *name, const uint16_t *matrix,
 void init_random_matrix_p(uint16_t *matrix, int rows, int cols, 
                        const uint8_t *seed, size_t seed_len);
 
-void init_random_matrix_p(uint16_t *matrix, int rows, int cols, 
+void init_random_matrix_o(uint16_t *matrix, int rows, int cols, 
                        const uint8_t *seed, size_t seed_len);
 
 void init_random_matrix_l(uint16_t *matrix, int rows, int cols);

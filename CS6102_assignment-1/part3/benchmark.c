@@ -25,13 +25,6 @@ void uart_puts(const char *s) {
     }
 }   
 
-void print_cycles(const char *label, uint32_t cycles) {
-    uart_puts(label);
-    uart_puts(": ");
-    uart_put_u32(cycles);
-    uart_puts(" cycles\n");
-}
-
 void *memset(void *s, int c, size_t n) {
     unsigned char *p = s;
     while (n--) {
@@ -54,6 +47,13 @@ void uart_put_u32(uint32_t x) {
         x /= 10;
     }
     while (i--) uart_putc(buf[i]);
+}
+
+void print_cycles(const char *label, uint32_t cycles) {
+    uart_puts(label);
+    uart_puts(": ");
+    uart_put_u32(cycles);
+    uart_puts(" cycles\n");
 }
 
 

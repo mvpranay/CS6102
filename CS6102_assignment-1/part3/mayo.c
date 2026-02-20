@@ -25,7 +25,7 @@ void init_random_matrix_o(uint16_t *matrix, int rows, int cols,
                         const uint8_t *seed, size_t seed_len) {
     size_t num_elements = rows * cols;
     size_t num_bytes = num_elements * 2; 
-    uint8_t *random_bytes[2 * num_elements];
+    uint8_t random_bytes[2 * num_elements];
     
     shake256(random_bytes, num_bytes, seed, seed_len);
     
@@ -52,7 +52,6 @@ void init_random_matrix_l(uint16_t *matrix, int rows, int cols) {
 // ============================================================================
 
 // uint16_t gf65536_mul(uint16_t a, uint16_t b) {
-//     // return 0;
 //     // TODO STUDENTS: Implement GF(2^16) multiplication
 //     // uint16_t X1 = (a & 0xFF00) >> 8;
 //     uint16_t X2 = (a & 0x00FF);

@@ -51,47 +51,47 @@ void init_random_matrix_l(uint16_t *matrix, int rows, int cols) {
 // TODO : GF(2^16) Multiplication
 // ============================================================================
 
-// uint16_t gf65536_mul(uint16_t a, uint16_t b) {
-//     // TODO STUDENTS: Implement GF(2^16) multiplication
-//     // uint16_t X1 = (a & 0xFF00) >> 8;
-//     uint16_t X2 = (a & 0x00FF);
-    
-//     // uint16_t spaced_X1 = (X1 & 0x000F) | ((X1 & 0x00F0) << 4);
-//     uint16_t spaced_X2 = (X2 & 0x000F) | ((X2 & 0x00F0) << 4);
-
-//     // uint16_t prod1 = (-(b & 1) & spaced_X1) 
-//     //               ^ ((b & 2) * spaced_X1) 
-//     //               ^ ((b & 4) * spaced_X1) 
-//     //               ^ ((b & 8) * spaced_X1);
-
-//     uint16_t prod2 = (-(b & 1) & spaced_X2) 
-//                   ^ ((b & 2) * spaced_X2) 
-//                   ^ ((b & 4) * spaced_X2) 
-//                   ^ ((b & 8) * spaced_X2);
-
-//     // uint16_t reduced1 = prod1 
-//     //                  ^ ((prod1 >> 4) & 0x0F0F) 
-//     //                  ^ ((prod1 & 0xF0F0) >> 3);
-    
-//     uint16_t reduced2 = prod2
-//                      ^ ((prod2 >> 4) & 0x0F0F) 
-//                      ^ ((prod2 & 0xF0F0) >> 3);
-
-//     return (((reduced2 & 0x000F) | ((reduced2 >> 4) & 0x00F0)) << 8) | (reduced2 & 0x000F) | ((reduced2 >> 4) & 0x00F0);
-
-//     return 0;
-// }
-
-uint16_t mul_f(uint16_t a, uint16_t b)
-{
-    uint16_t r0_2 = ((a & 2) * b) ^ ((a & 1) * b) ^ ((a & 4) * b) ^ ((a & 8) * b);
-    return (r0_2 ^ (r0_2 >> 4) ^ (r0_2 & 0xf0) >> 3) & 0xf;
-}
-
 uint16_t gf65536_mul(uint16_t a, uint16_t b) {
     // TODO STUDENTS: Implement GF(2^16) multiplication
-    return mul_f(a & 0xF, b) ^ (mul_f((a & 0xF0) >> 4, b) << 4) ^ (mul_f((a & 0xF00) >> 8, b) << 8) ^ (mul_f((a & 0xF000) >> 12, b) << 12);
+    uint16_t X1 = (a & 0xFF00) >> 8;
+    uint16_t X2 = (a & 0x00FF);
+    
+    uint16_t spaced_X1 = (X1 & 0x000F) | ((X1 & 0x00F0) << 4);
+    uint16_t spaced_X2 = (X2 & 0x000F) | ((X2 & 0x00F0) << 4);
+
+    uint16_t prod1 = (-(b & 1) & spaced_X1) 
+                  ^ ((b & 2) * spaced_X1) 
+                  ^ ((b & 4) * spaced_X1) 
+                  ^ ((b & 8) * spaced_X1);
+
+    uint16_t prod2 = (-(b & 1) & spaced_X2) 
+                  ^ ((b & 2) * spaced_X2) 
+                  ^ ((b & 4) * spaced_X2) 
+                  ^ ((b & 8) * spaced_X2);
+
+    uint16_t reduced1 = prod1 
+                     ^ ((prod1 >> 4) & 0x0F0F) 
+                     ^ ((prod1 & 0xF0F0) >> 3);
+    
+    uint16_t reduced2 = prod2
+                     ^ ((prod2 >> 4) & 0x0F0F) 
+                     ^ ((prod2 & 0xF0F0) >> 3);
+
+    return (((reduced2 & 0x000F) | ((reduced2 >> 4) & 0x00F0)) << 8) | (reduced2 & 0x000F) | ((reduced2 >> 4) & 0x00F0);
+
+    return 0;
 }
+
+// uint16_t mul_f(uint16_t a, uint16_t b)
+// {
+//     uint16_t r0_2 = ((a & 2) * b) ^ ((a & 1) * b) ^ ((a & 4) * b) ^ ((a & 8) * b);
+//     return (r0_2 ^ (r0_2 >> 4) ^ (r0_2 & 0xf0) >> 3) & 0xf;
+// }
+
+// uint16_t gf65536_mul(uint16_t a, uint16_t b) {
+//     // TODO STUDENTS: Implement GF(2^16) multiplication
+//     return mul_f(a & 0xF, b) ^ (mul_f((a & 0xF0) >> 4, b) << 4) ^ (mul_f((a & 0xF00) >> 8, b) << 8) ^ (mul_f((a & 0xF000) >> 12, b) << 12);
+// }
 
 // ============================================================================
 // TODO : Matrix Operations

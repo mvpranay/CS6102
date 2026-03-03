@@ -51,6 +51,7 @@ void init_random_matrix_l(uint16_t *matrix, int rows, int cols) {
 // TODO : GF(2^16) Multiplication
 // ============================================================================
 
+__attribute__((optimize("O3,unroll-loops")))
 uint16_t gf65536_mul(uint16_t a, uint16_t b) {
     // TODO STUDENTS: Implement GF(2^16) multiplication
     uint16_t X1 = (a & 0xFF00) >> 8;
@@ -80,23 +81,12 @@ uint16_t gf65536_mul(uint16_t a, uint16_t b) {
     return (((reduced1 & 0x000F) | ((reduced1 >> 4) & 0x00F0)) << 8) | (reduced2 & 0x000F) | ((reduced2 >> 4) & 0x00F0);
 }
 
-// uint16_t mul_f(uint16_t a, uint16_t b)
-// {
-//     uint16_t r0_2 = ((a & 2) * b) ^ ((a & 1) * b) ^ ((a & 4) * b) ^ ((a & 8) * b);
-//     return (r0_2 ^ (r0_2 >> 4) ^ (r0_2 & 0xf0) >> 3) & 0xf;
-// }
-
-// uint16_t gf65536_mul(uint16_t a, uint16_t b) {
-//     // TODO STUDENTS: Implement GF(2^16) multiplication
-//     return mul_f(a & 0xF, b) ^ (mul_f((a & 0xF0) >> 4, b) << 4) ^ (mul_f((a & 0xF00) >> 8, b) << 8) ^ (mul_f((a & 0xF000) >> 12, b) << 12);
-// }
-
 // ============================================================================
 // TODO : Matrix Operations
 // ============================================================================
 
 // mat[r,c] of dim (rows, cols) => mat[r * cols + c]
-
+__attribute__((optimize("O3,unroll-loops")))
 void gf65536_mat_transpose(const uint16_t *src, uint16_t *dst,
                            int rows, int cols) {
     // TODO STUDENTS: Implement matrix transpose
@@ -107,6 +97,7 @@ void gf65536_mat_transpose(const uint16_t *src, uint16_t *dst,
     }
 }
 
+__attribute__((optimize("O3,unroll-loops")))
 void gf65536_mat_add(const uint16_t *A, const uint16_t *B, uint16_t *C,
                      int rows, int cols) {
     // TODO STUDENTS: Implement matrix addition over GF(2^16)
@@ -124,7 +115,7 @@ void gf65536_mat_add(const uint16_t *A, const uint16_t *B, uint16_t *C,
  * This is the bottleneck of the computation.
  * Make sure to optimize this function.
  */
-
+__attribute__((optimize("O3,unroll-loops")))
 void gf65536_mat_mul(const uint16_t *A, const uint16_t *B, uint16_t *C,
                      int rows_A, int cols_A, int cols_B) {
     // TODO STUDENTS: Implement matrix multiplication over GF(2^16)

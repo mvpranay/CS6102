@@ -1,5 +1,7 @@
 import numpy as np
-team_number = None  # Change team number to your team number
+from scipy.linalg import eigh
+
+team_number = 7  # Change team number to your team number
 
 if team_number is None:
     raise NotImplementedError("Please set your team_number before running the script.")
@@ -26,24 +28,157 @@ sbox = [
 sbox = np.array(sbox, dtype=np.uint8)
 
 
+def align_traces(traces, reference, max_shift=1000):
+    """Cross-correlation alignment of traces against a reference waveform."""
+    aligned = np.zeros_like(traces)
+    ref_c = reference - reference.mean()
+    for i, trace in enumerate(traces):
+        corr = np.correlate(trace - trace.mean(), ref_c, mode='full')
+        center = len(reference) - 1
+        window = corr[center - max_shift: center + max_shift + 1]
+        best_shift = np.argmax(window) - max_shift
+        if best_shift > 0:
+            aligned[i, best_shift:] = trace[:-best_shift]
+        elif best_shift < 0:
+            aligned[i, :best_shift] = trace[-best_shift:]
+        else:
+            aligned[i] = trace
+    return aligned
+
+
 # Importing the Profiling and Attack traces [Do not modify]
 # -----------------------------------------------------
 data = np.load("profiling_traces.npz")
 
-trace_array = data["traces"]
-textin_array = data["textin"]
-textout_array = data["textout"]
-key_array = data["keys"]
+trace_array  = data["traces"]    # (5000, 6000)
+# trace_array = align_traces(trace_array, trace_array.mean(axis=0))
+textin_array = data["textin"]    # (5000, 16)
+key_array    = data["keys"]      # (5000, 16)
 
-data = np.load(f"attack_traces_team_{team_number}.npz") 
+data = np.load(f"attack_traces_team_{team_number}.npz")
 
-attack_traces = data["traces"]
-attack_textins = data["textin"]
-attack_textouts = data["textout"]
+attack_traces  = align_traces(data["traces"], trace_array.mean(axis=0))
+attack_textins = data["textin"]  # (100, 16)
 # -----------------------------------------------------
 
+# plot the first 5 aligned traces to verify
+import matplotlib.pyplot as plt
+plt.figure(figsize=(12, 6))
+for i in range(79,79+1):
+    plt.plot(attack_traces[i], linewidth=0.8, label=f'Trace {i}')
 
-# Your code starts here
-# -----------------------------------------------------
+plt.title("First 5 Aligned Profiling Traces")
+plt.xlabel("Sample Index")
+plt.ylabel("Amplitude")
+plt.grid(True, alpha=0.3)
+plt.legend()
+plt.tight_layout()
+plt.show()
 
-raise NotImplementedError("Add your code here, and delete this.")
+exit(0)
+
+# Profiling: intermediate values for all 16 key bytes
+sbox_outputs    = sbox[textin_array ^ key_array]     # (5000, 16)
+hamming_weights = np.bitwise_count(sbox_outputs)     # (5000, 16)
+
+
+def ftest_snr(X, labels, num_classes):
+    """
+    F-test statistic per sample point (Choudary & Kuhn 2014, eq. 7).
+    Measures how much inter-class mean variation exceeds intra-class variance.
+    """
+    n = X.shape[0]
+    grand_mean = X.mean(0)
+    between = np.zeros(X.shape[1])
+    within  = np.zeros(X.shape[1])
+    for k in range(num_classes):
+        idx = labels == k
+        nk  = idx.sum()
+        if nk < 2:
+            continue
+        mk      = X[idx].mean(0)
+        between += nk * (mk - grand_mean) ** 2
+        within  += ((X[idx] - mk) ** 2).sum(0)
+    between /= (num_classes - 1)
+    within  /= (n - num_classes)
+    return between / (within + 1e-12)
+
+
+# ── Attack parameters ──────────────────────────────────────────────────────────
+n_a       = len(attack_traces)   # 100 attack traces
+trace_idx = np.arange(n_a)
+
+num_hw  = 9     # HW classes 0..8
+k_pois  = 200   # initial POI pool selected by F-test SNR
+m_lda   = num_hw - 1  # max LDA directions for 9 classes = 8
+
+key_output = []
+
+for byte in range(16):
+    hw_prof = hamming_weights[:, byte]   # (5000,) — HW labels 0..8
+
+    # ── 1. F-test SNR: select top k_pois samples ──────────────────────────────
+    snr      = ftest_snr(trace_array, hw_prof, num_hw)
+    poi_cols = np.sort(np.argsort(snr)[::-1][:k_pois])
+    Xp = trace_array[:, poi_cols]         # (5000, k_pois)
+    Xa = attack_traces[:, poi_cols]       # (n_a,  k_pois)
+
+    n, d = Xp.shape
+
+    # ── 2. Per-class means in raw POI space ───────────────────────────────────
+    class_means = np.zeros((num_hw, d))
+    for k in range(num_hw):
+        idx = hw_prof == k
+        if idx.any():
+            class_means[k] = Xp[idx].mean(0)
+
+    grand_mean = Xp.mean(0)
+
+    # ── 3. Between-groups matrix B (paper eq. 8) ──────────────────────────────
+    B = np.zeros((d, d))
+    for k in range(num_hw):
+        nk = int((hw_prof == k).sum())
+        if nk == 0:
+            continue
+        diff = class_means[k] - grand_mean
+        B += nk * np.outer(diff, diff)
+
+    # ── 4. Pooled within-class covariance S_pooled (paper eq. 21) ─────────────
+    residuals = Xp - class_means[hw_prof]           # row i → residual from its class mean
+    S_pooled  = (residuals.T @ residuals) / (n - num_hw)
+    S_pooled += 1e-6 * np.eye(d)
+
+    # ── 5. LDA: solve B u = λ S_pooled u (paper eq. 14-16) ───────────────────
+    # scipy eigh(B, S_pooled) normalises columns of U so that U.T @ S_pooled @ U = I
+    # → in the projected space, S_pooled_lda = I (pooled cov becomes identity)
+    # We only need the top m_lda eigenvectors (largest eigenvalues).
+    _, U = eigh(B, S_pooled, subset_by_index=[d - m_lda, d - 1])
+    U = U[:, ::-1]   # descending eigenvalue order → (d, m_lda)
+
+    # ── 6. Project profiling and attack traces to LDA space ───────────────────
+    Xp_lda = Xp @ U   # (5000, m_lda)
+    Xa_lda = Xa @ U   # (n_a,  m_lda)
+
+    # ── 7. Class means in LDA space ───────────────────────────────────────────
+    lda_means = np.zeros((num_hw, m_lda))
+    for k in range(num_hw):
+        idx = hw_prof == k
+        if idx.any():
+            lda_means[k] = Xp_lda[idx].mean(0)
+
+    # ── 8. d_LINEAR^joint discriminant (paper eq. 29) ─────────────────────────
+    # Because S_pooled_lda = I, d_LINEAR simplifies to:
+    #   d(k | x_i) = μ_k · x_i  −  ½ ‖μ_k‖²
+    # Summing over all n_a attack traces for each key guess:
+    #   score(kb) = Σ_i [ μ_{hw_i} · x_i  −  ½ ‖μ_{hw_i}‖² ]
+    MX = lda_means @ Xa_lda.T         # (num_hw, n_a) — MX[k,i] = μ_k · x_i
+    C  = 0.5 * (lda_means ** 2).sum(1) # (num_hw,)    — C[k] = ½‖μ_k‖²
+
+    scores = np.empty(256)
+    for kb in range(256):
+        hyp_hw     = np.bitwise_count(sbox[attack_textins[:, byte] ^ kb])  # (n_a,)
+        scores[kb] = MX[hyp_hw, trace_idx].sum() - C[hyp_hw].sum()
+
+    key_output.append(int(np.argmax(scores)))
+
+print(",".join(map(str, key_output)))

@@ -26,22 +26,49 @@ sbox = [
 ]
 sbox = np.array(sbox, dtype=np.uint8)
 
+def find_best_window(trace, window_size=4500):
+    # Sliding window sum using convolution (fast)
+    trace = np.trim_zeros(trace)
+    window = np.ones(window_size)
+    scores = np.convolve(trace ** 2, window, mode='valid')
+
+    start = np.argmin(scores)
+    end = start + window_size
+
+    return start, end
+
+def align_traces(traces): 
+    result = []
+    for trace in traces:
+        start, end = find_best_window(trace)
+        result.append(trace[start:end])
+    return np.array(result)
 
 # Importing the Profiling and Attack traces [Do not modify]
 # -----------------------------------------------------
 data = np.load("profiling_traces.npz")
 
-trace_array = data["traces"]
+trace_array = align_traces(data["traces"])
 textin_array = data["textin"]
 textout_array = data["textout"]
 key_array = data["keys"]
 
 data = np.load(f"attack_traces_team_{team_number}.npz") 
 
-attack_traces = data["traces"]
+attack_traces = align_traces(data["traces"])
 attack_textins = data["textin"]
 attack_textouts = data["textout"]
 # -----------------------------------------------------
+
+# plot the mean trace array
+plt.figure(figsize=(12, 4))
+plt.plot(trace_array.mean(axis=0), linewidth=0.8)   
+plt.title("Mean Profiling Trace (Aligned)")
+plt.xlabel("Sample Index")
+plt.ylabel("Amplitude")
+plt.grid(True, alpha=0.3)
+plt.tight_layout()
+plt.show()
 
 # (num_traces, 16)
 sbox_outputs = sbox[textin_array ^ key_array]
@@ -74,7 +101,7 @@ def compute_log_likelihood(attack_trace_pois, mean, cov):
     d = len(mean)
     diff = attack_trace_pois - mean
     inv_cov = np.linalg.inv(cov)
-    log_det_cov = np.log(np.linalg.slogdet(cov))
+    log_det_cov = np.log(np.linalg.det(cov) + 1e-12)
     log_likelihood = -0.5 * (diff @ inv_cov @ diff.T + log_det_cov)
     return log_likelihood
 
@@ -107,7 +134,7 @@ def get_best_window(X:np.ndarray, y:np.ndarray, win=10):
 
 answer = []
 
-win = 12
+win = 5
 for byte in range(16):
     best_window_start, corr = get_best_window(trace_array, hamming_weights[:, byte], win)
 
